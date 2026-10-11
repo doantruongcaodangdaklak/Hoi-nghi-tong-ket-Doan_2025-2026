@@ -16,5 +16,24 @@
  function updateRoleFields(){const role=$('att-role')?.value||'';const guest=$('guest-fields');const delegate=$('delegate-fields');if(guest)guest.classList.toggle('hidden',role!=='Khách mời');if(delegate)delegate.classList.toggle('hidden',role!=='Đại biểu tham dự');if(role!=='Khách mời'&&$('att-guest-unit'))$('att-guest-unit').value='';if(role!=='Đại biểu tham dự'){if($('att-lien-chi-doan'))$('att-lien-chi-doan').value='';if($('att-chi-doan'))$('att-chi-doan').value='';}else{fillChildren();}}
  async function downloadCard(){const card=$('attendee-card');if(!card||!window.html2canvas){alert('Không tải được công cụ xuất ảnh. Thầy/cô có thể dùng In / Lưu PDF.');return;}try{const canvas=await html2canvas(card,{scale:2,backgroundColor:'#ffffff',useCORS:true});const a=document.createElement('a');a.download='the-dai-bieu-dien-tu.png';a.href=canvas.toDataURL('image/png');a.click();}catch(err){console.error(err);alert('Chưa xuất được ảnh thẻ. Vui lòng chọn In / Lưu PDF.');}}
  function printCard(){const card=$('attendee-card');if(!card)return;const w=window.open('','_blank','width=900,height=700');if(!w){alert('Trình duyệt đang chặn cửa sổ in. Hãy cho phép cửa sổ bật lên rồi thử lại.');return;}w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Thẻ đại biểu điện tử</title><style>body{font-family:Arial,sans-serif;padding:24px;display:flex;justify-content:center}*{box-sizing:border-box}@media print{body{padding:0}}</style></head><body>'+card.outerHTML+'</body></html>');w.document.close();w.onload=()=>{w.focus();w.print();};}
- document.addEventListener('DOMContentLoaded',()=>{loadOptions();loadCount();$('att-role')?.addEventListener('change',updateRoleFields);$('att-lien-chi-doan')?.addEventListener('change',fillChildren);$('attendance-form')?.addEventListener('submit',submit);$('att-photo')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f){photoDataUrl='';$('att-photo-preview-wrap')?.classList.add('hidden');return;}if(!['image/png','image/jpeg'].includes(f.type)||f.size>5*1024*1024){e.target.value='';photoDataUrl='';alert('Vui lòng chọn ảnh PNG/JPG có dung lượng tối đa 5 MB.');return;}try{photoDataUrl=await readFile(f);$('att-photo-preview').src=photoDataUrl;$('att-photo-preview-wrap').classList.remove('hidden');}catch{alert('Không đọc được ảnh đã chọn.');}});$('att-card-download')?.addEventListener('click',downloadCard);$('att-card-print')?.addEventListener('click',printCard);updateRoleFields();});
+ function initAttendanceQR(){
+    const box=$('attendance-qr');
+    if(!box)return;
+    box.innerHTML='';
+    const isSecure=window.isSecureContext || location.hostname==='localhost' || location.hostname==='127.0.0.1';
+    if(!isSecure){
+      box.textContent='QR điểm danh cần được mở bằng HTTPS hoặc localhost.';
+      return;
+    }
+    if(!window.QRCode){
+      box.textContent='Chưa tải được thư viện tạo QR. Vui lòng tải lại trang hoặc kiểm tra kết nối mạng.';
+      console.error('QRCode.js chưa được tải; kiểm tra CDN và lỗi mạng trong Console.');
+      return;
+    }
+    const target=new URL(window.location.href);
+    target.hash='diem-danh';
+    box.className='mt-4 mx-auto w-48 h-48 rounded-2xl bg-white border border-slate-200 grid place-items-center p-3';
+    new QRCode(box,{text:target.toString(),width:176,height:176,colorDark:'#00529C',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  }
+  document.addEventListener('DOMContentLoaded',()=>{initAttendanceQR();loadOptions();loadCount();$('att-role')?.addEventListener('change',updateRoleFields);$('att-lien-chi-doan')?.addEventListener('change',fillChildren);$('attendance-form')?.addEventListener('submit',submit);$('att-photo')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f){photoDataUrl='';$('att-photo-preview-wrap')?.classList.add('hidden');return;}if(!['image/png','image/jpeg'].includes(f.type)||f.size>5*1024*1024){e.target.value='';photoDataUrl='';alert('Vui lòng chọn ảnh PNG/JPG có dung lượng tối đa 5 MB.');return;}try{photoDataUrl=await readFile(f);$('att-photo-preview').src=photoDataUrl;$('att-photo-preview-wrap').classList.remove('hidden');}catch{alert('Không đọc được ảnh đã chọn.');}});$('att-card-download')?.addEventListener('click',downloadCard);$('att-card-print')?.addEventListener('click',printCard);updateRoleFields();});
 })();
