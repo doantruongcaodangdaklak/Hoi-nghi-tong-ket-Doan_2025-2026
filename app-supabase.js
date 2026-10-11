@@ -10,5 +10,23 @@
  const {data:dupe}=await sb.from('attendance').select('id').eq('name',name).eq('role',role).eq('unit',unit).eq('lien_chi_doan',lien).eq('chi_doan',chi).limit(1); if(dupe&&dupe.length){msg.textContent='Bạn đã điểm danh trước đó. Vui lòng không gửi lại.';return;}
  const {error}=await sb.from('attendance').insert({name,role,unit,lien_chi_doan:lien,chi_doan:chi,phone}); if(error){msg.textContent=error.code==='23505'?'Bạn đã điểm danh trước đó. Vui lòng không gửi lại.':('Không thể ghi nhận: '+error.message);return;} msg.textContent='Điểm danh thành công!'; e.target.reset(); fillChildren(); loadCount(); }
  async function loadCount(){const e=$('attendance-count');if(!e)return;const {count}=await sb.from('attendance').select('*',{count:'exact',head:true});if(count!=null)e.textContent=count;}
- document.addEventListener('DOMContentLoaded',()=>{loadOptions();loadCount();$('att-lien-chi-doan')?.addEventListener('change',fillChildren);$('attendance-form')?.addEventListener('submit',submit);});
+ function updateRoleFields(){
+  const role=$('att-role')?.value||'';
+  const guest=$('guest-fields'); const delegate=$('delegate-fields');
+  if(guest) guest.classList.toggle('hidden',role!=='Khách mời');
+  if(delegate) delegate.classList.toggle('hidden',role!=='Đại biểu tham dự');
+  // Clear the fields for the role that is not selected so stale values are not submitted.
+  if(role!=='Khách mời' && $('att-guest-unit')) $('att-guest-unit').value='';
+  if(role!=='Đại biểu tham dự'){
+   if($('att-lien-chi-doan')) $('att-lien-chi-doan').value='';
+   if($('att-chi-doan')) $('att-chi-doan').value='';
+  } else { fillChildren(); }
+ }
+ document.addEventListener('DOMContentLoaded',()=>{
+  loadOptions(); loadCount();
+  $('att-role')?.addEventListener('change',updateRoleFields);
+  $('att-lien-chi-doan')?.addEventListener('change',fillChildren);
+  $('attendance-form')?.addEventListener('submit',submit);
+  updateRoleFields();
+ });
 })();
