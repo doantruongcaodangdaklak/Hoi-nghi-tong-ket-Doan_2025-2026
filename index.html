@@ -1358,50 +1358,128 @@
 
 
     <!-- Nhạc nền hội nghị: trình duyệt yêu cầu người dùng bấm phát lần đầu -->
-    <audio id="backgroundMusic" preload="metadata" loop>
-        <source src="media/nhac-nen-hoi-nghi.mp3" type="audio/mpeg">
-    </audio>
-    <div class="music-player" role="group" aria-label="Điều khiển nhạc nền">
-        <span class="music-note" aria-hidden="true">♫</span>
-        <button id="musicToggle" type="button" aria-pressed="false" aria-label="Phát nhạc nền">▶ Phát nhạc</button>
-        <label for="musicVolume" class="sr-only">Âm lượng nhạc nền</label>
-        <input id="musicVolume" class="music-volume" type="range" min="0" max="1" step="0.05" value="0.35" aria-label="Âm lượng">
-    </div>
-    <script>
-    (function () {
-        const audio = document.getElementById('backgroundMusic');
-        const toggle = document.getElementById('musicToggle');
-        const volume = document.getElementById('musicVolume');
-        if (!audio || !toggle || !volume) return;
-        audio.volume = Number(volume.value);
-        volume.addEventListener('input', function () { audio.volume = Number(volume.value); });
-        toggle.addEventListener('click', async function () {
-            if (audio.paused) {
-                try {
-                    await audio.play();
-                    toggle.textContent = 'Ⅱ Tắt nhạc';
-                    toggle.setAttribute('aria-pressed', 'true');
-                    toggle.setAttribute('aria-label', 'Tạm dừng nhạc nền');
-                } catch (error) {
-                    console.error('Không phát được nhạc nền:', error);
-                    toggle.textContent = '▶ Thử phát lại';
-                    toggle.setAttribute('aria-pressed', 'false');
-                }
-            } else {
-                audio.pause();
-                toggle.textContent = '▶ Phát nhạc';
+    
+<!-- Nhạc nền hội nghị: playlist tự chuyển bài -->
+<audio id="backgroundMusic" preload="metadata"></audio>
+
+<div class="music-player" role="group" aria-label="Điều khiển nhạc nền">
+    <span class="music-note" aria-hidden="true">♫</span>
+
+    <span id="musicTrackName" aria-live="polite">
+        Nhạc nền hội nghị
+    </span>
+
+    <button id="musicPrev" type="button" aria-label="Bài trước">
+        ⏮
+    </button>
+
+    <button id="musicToggle" type="button"
+            aria-pressed="false" aria-label="Phát nhạc nền">
+        ▶ Phát nhạc
+    </button>
+
+    <button id="musicNext" type="button" aria-label="Bài tiếp theo">
+        ⏭
+    </button>
+
+    <label for="musicVolume" class="sr-only">Âm lượng nhạc</label>
+    <input id="musicVolume" class="music-volume"
+           type="range" min="0" max="1" step="0.05"
+           value="0.35" aria-label="Âm lượng">
+</div>
+
+<script>
+(function () {
+    const audio = document.getElementById('backgroundMusic');
+    const toggle = document.getElementById('musicToggle');
+    const volume = document.getElementById('musicVolume');
+    const trackName = document.getElementById('musicTrackName');
+    const prev = document.getElementById('musicPrev');
+    const next = document.getElementById('musicNext');
+
+    if (!audio || !toggle || !volume || !trackName || !prev || !next) return;
+
+    // Sửa tên và đường dẫn theo các file MP3 thực tế của thầy.
+    const playlist = [
+        { name: 'Vững tay nghề - Sáng tương lai', src: 'media/bai-01.mp3' },
+        { name: 'Nơi khởi nguồn ước mơ nghề nghiệp', src: 'media/bai-02.mp3' },
+        { name: 'Áo xanh gọi tương lai', src: 'media/bai-03.mp3' }
+    ];
+
+    let current = 0;
+
+    audio.volume = Number(volume.value);
+
+    function loadTrack(index, shouldPlay) {
+        current = (index + playlist.length) % playlist.length;
+        audio.src = playlist[current].src;
+        trackName.textContent = playlist[current].name;
+        audio.load();
+
+        if (shouldPlay) {
+            audio.play().catch(function (error) {
+                console.error('Không phát được nhạc:', error);
+                toggle.textContent = '▶ Bấm để phát';
                 toggle.setAttribute('aria-pressed', 'false');
-                toggle.setAttribute('aria-label', 'Phát nhạc nền');
+            });
+        }
+    }
+
+    function setPlayingState(isPlaying) {
+        toggle.textContent = isPlaying ? 'Ⅱ Tạm dừng' : '▶ Phát nhạc';
+        toggle.setAttribute('aria-pressed', String(isPlaying));
+        toggle.setAttribute(
+            'aria-label',
+            isPlaying ? 'Tạm dừng nhạc nền' : 'Phát nhạc nền'
+        );
+    }
+
+    volume.addEventListener('input', function () {
+        audio.volume = Number(volume.value);
+    });
+
+    toggle.addEventListener('click', async function () {
+        if (audio.paused) {
+            try {
+                await audio.play();
+            } catch (error) {
+                console.error('Không phát được nhạc:', error);
+                trackName.textContent =
+                    playlist[current].name + ' — hãy kiểm tra file nhạc';
             }
-        });
-        audio.addEventListener('ended', function () {
-            toggle.textContent = '▶ Phát nhạc';
-            toggle.setAttribute('aria-pressed', 'false');
-        });
-        audio.addEventListener('error', function () {
-            toggle.title = 'Không tải được file nhạc. Hãy kiểm tra thư mục media.';
-        });
-    })();
-    </script>
+        } else {
+            audio.pause();
+        }
+    });
+
+    prev.addEventListener('click', function () {
+        loadTrack(current - 1, true);
+    });
+
+    next.addEventListener('click', function () {
+        loadTrack(current + 1, true);
+    });
+
+    // Tự chuyển sang bài tiếp theo khi bài hiện tại kết thúc.
+    audio.addEventListener('ended', function () {
+        loadTrack(current + 1, true);
+    });
+
+    audio.addEventListener('play', function () {
+        setPlayingState(true);
+    });
+
+    audio.addEventListener('pause', function () {
+        setPlayingState(false);
+    });
+
+    audio.addEventListener('error', function () {
+        trackName.textContent =
+            'Không tải được: ' + playlist[current].name;
+    });
+
+    loadTrack(0, false);
+})();
+</script>
 </body>
 </html>
